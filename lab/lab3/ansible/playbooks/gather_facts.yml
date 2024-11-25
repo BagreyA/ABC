@@ -1,0 +1,11 @@
+---
+- name: Gather facts and save to file
+  hosts: ansible_hosts
+  tasks:
+    - name: Gather facts
+      setup:
+
+    - name: Save facts to file
+      copy:
+        content: "{{ ansible_facts | to_nice_yaml }}"
+        dest: "/tmp/ansible_facts_{{ inventory_hostname }}.yml"

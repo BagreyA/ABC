@@ -1,0 +1,29 @@
+# playbooks/templates/system_info.j2
+system_info:
+  os:
+    name: {{ ansible_distribution }}
+    version: {{ ansible_distribution_version }}
+    kernel: {{ ansible_kernel }}
+  cpu:
+    model: {{ ansible_processor[0] }}
+    cores: {{ ansible_processor_cores }}
+  memory:
+    total: {{ ansible_memory_mb.real.total }} MB
+    used: {{ ansible_memory_mb.real.used }} MB
+    free: {{ ansible_memory_mb.real.free }} MB
+  network:
+    interfaces: 
+      {% if ansible_interfaces is defined %}
+        {% for interface in ansible_interfaces %}
+        - name: {{ interface }}
+          ip: {{ ansible_eth[interface].ipv4.address if ansible_eth[interface].ipv4 is defined else 'N/A' }}
+        {% endfor %}
+      {% else %}
+      - message: "No network interfaces found."
+      {% endif %}
+  filesystem:
+    {% for mount in ansible_mounts %}
+    - mount_point: {{ mount.mount }}
+      size_total: {{ mount.size_total }} bytes
+      size_available: {{ mount.size_available }} bytes
+    {% endfor %}

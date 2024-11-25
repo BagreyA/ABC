@@ -1,0 +1,10 @@
+# playbooks/gather_system_info.yml
+---
+- name: Gather system information
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: Create structured system information file
+      ansible.builtin.template:
+        src: templates/system_info.j2
+        dest: /tmp/system_info.yml

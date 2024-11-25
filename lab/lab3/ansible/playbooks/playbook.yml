@@ -1,0 +1,14 @@
+# ~/ansible/playbooks/playbook.yml
+- hosts: ansible_hosts
+  become: true
+  tasks:
+    - name: Установка Python
+      apt:
+        name: python3
+        state: present
+
+    - name: Установка PIP
+      apt:
+        name: python3-pip
+        state: present
+

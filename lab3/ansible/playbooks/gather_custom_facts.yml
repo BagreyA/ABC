@@ -1,0 +1,94 @@
+---
+- name: Gather specific system facts and save to file
+  hosts: ansible_hosts
+  gather_facts: yes
+  tasks:
+    - name: Gather OS information
+      set_fact:
+        os_info:
+          name: "{{ ansible_distribution }} {{ ansible_distribution_version }}"
+          kernel_version: "{{ ansible_kernel }}"
+          kernel_arch: "{{ ansible_architecture }}"
+
+    - name: Gather processor information
+      set_fact:
+        cpu_info:
+          model: "{{ ansible_processor[0] }}"
+          cores: "{{ ansible_processor_cores }}"
+          cache_size: "{{ ansible_processor[2] }}"
+
+    - name: Gather memory information
+      set_fact:
+        memory_info:
+          total: "{{ ansible_memtotal_mb }}"
+          used: "{{ ansible_memtotal_mb - ansible_memfree_mb }}"
+          free: "{{ ansible_memfree_mb }}"
+
+    - name: Gather network interface information
+      set_fact:
+        network_info: []
+      loop: "{{ ansible_interfaces }}"
+      loop_control:
+        label: "{{ item }}"
+      when: item is defined
+      register: iface_info
+
+    - name: Populate network interface information
+      set_fact:
+        network_info: "{{ network_info + [ { 'interface': item, 'ip': ansible_interface_addresses[item] | default('N/A'), 'mac': ansible_interfaces[item].macaddress | default('N/A'), 'speed': ansible_interfaces[item].speed | default('N/A') } ] }}"
+      loop: "{{ ansible_interfaces }}"
+      when: ansible_interface_addresses[item] is defined
+
+    - name: Gather filesystem information
+      set_fact:
+        filesystem_info: []
+      when: ansible_mounts is defined
+
+    - name: Populate filesystem information
+      set_fact:
+        filesystem_info: "{{ filesystem_info + [ { 'mount_point': item.mount, 'size': item.size_total, 'used': item.size_used | default('N/A'), 'free': item.size_available } ] }}"
+      loop: "{{ ansible_mounts }}"
+      when: item.size_total is defined
+
+    - name: Save collected information to file
+      copy:
+        content: |
+          OS Info:
+          Name: {{ os_info.name }}
+          Kernel Version: {{ os_info.kernel_version }}
+          Kernel Architecture: {{ os_info.kernel_arch }}
+
+          CPU Info:
+          Model: {{ cpu_info.model }}
+          Cores: {{ cpu_info.cores }}
+          Cache Size: {{ cpu_info.cache_size }} KB
+
+          Memory Info:
+          Total: {{ memory_info.total }} MB
+          Used: {{ memory_info.used }} MB
+          Free: {{ memory_info.free }} MB
+
+          Network Info:
+          {% if network_info is defined and network_info | length > 0 %}
+          {% for iface in network_info %}
+          Interface: {{ iface.interface }}
+          IP: {{ iface.ip }}
+          MAC: {{ iface.mac }}
+          Speed: {{ iface.speed }}
+          {% endfor %}
+          {% else %}
+          No network interfaces found.
+          {% endif %}
+
+          Filesystem Info:
+          {% if filesystem_info is defined and filesystem_info | length > 0 %}
+          {% for fs in filesystem_info %}
+          Mount Point: {{ fs.mount_point }}
+          Size: {{ fs.size }} bytes
+          Used: {{ fs.used }} bytes
+          Free: {{ fs.free }} bytes
+          {% endfor %}
+          {% else %}
+          No filesystems found.
+          {% endif %}
+        dest: /tmp/ansible_facts.yml 
